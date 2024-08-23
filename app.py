@@ -67,9 +67,16 @@ st.markdown("""
         box-shadow: 0 0 10px rgba(0, 122, 255, 0.5) !important;
     }
 
-    /* 優化其他白色文字元素的懸浮效果 */
+    .stSelectbox [data-baseweb="select"],
+    .stMultiSelect [data-baseweb="select"] {
+        cursor: pointer !important;
+    }
+
     .stSelectbox [data-baseweb="select"] div,
-    .stMultiSelect [data-baseweb="select"] div,
+    .stMultiSelect [data-baseweb="select"] div {
+        cursor: pointer !important;
+    }
+
     .stTextInput input,
     .stDateInput input,
     .stTimeInput input,
@@ -87,7 +94,6 @@ st.markdown("""
         box-shadow: 0 0 5px rgba(255, 255, 255, 0.3);
     }
 
-    /* 確保文本輸入框保持文本游標 */
     .stTextInput [data-baseweb="input"],
     .stTextInput [data-baseweb="input"] * {
         cursor: text !important;
@@ -659,7 +665,7 @@ if st.session_state.portfolio:
             styled_df = performance[['Symbol', 'Name', 'Market', 'Total Quantity', 'Average Buy Price', 'Current Price', 'Current Value (TWD)', 'Profit/Loss (TWD)', 'Performance %']].style.format({
                 'Total Quantity': '{:,.0f}',
                 'Average Buy Price': lambda x: x,  # 保持原樣,因為已經在calculate_performance中格式化
-                'Current Price': lambda x: x,  # 保持原樣,因為已經在calculate_performance中格式化
+                'Current Price': lambda x: x,
                 'Current Value (TWD)': 'NT${:,.0f}',
                 'Profit/Loss (TWD)': 'NT${:,.0f}',
                 'Performance %': '{:.2f}%'
