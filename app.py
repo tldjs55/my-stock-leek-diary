@@ -452,10 +452,6 @@ with st.sidebar:
                 else:
                     st.info('該股票沒有交易記錄')
 
-    if st.button("儲存投資組合", key="save_portfolio_button"):
-        save_portfolio()
-        st.success('已成功儲存資組合')
-
 # 主要內容區
 if st.session_state.portfolio:
     performance = calculate_performance()
