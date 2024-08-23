@@ -7,6 +7,7 @@ import plotly.graph_objects as go
 import plotly.express as px
 import requests
 from plotly.subplots import make_subplots
+import time
 
 st.set_page_config(page_title="我的投資組合", page_icon="📊", layout="wide")
 
@@ -293,6 +294,27 @@ def create_six_month_chart(portfolio):
     
     return fig
 
+def get_stock_info(symbol):
+    try:
+        # 先嘗試作為台股查詢
+        stock = yf.Ticker(f"{symbol}.TW")
+        info = stock.info
+        if info and 'longName' in info:
+            current_price = stock.history(period="1d")['Close'].iloc[-1]
+            return info['longName'], '台股', current_price
+        
+        # 如果台股查詢失敗,嘗試作為美股查詢
+        stock = yf.Ticker(symbol)
+        info = stock.info
+        if info and 'longName' in info:
+            current_price = stock.history(period="1d")['Close'].iloc[-1]
+            return info['longName'], '美股', current_price
+        
+        return None, None, None
+    except Exception as e:
+        print(f"查詢股票資訊時發生錯誤: {str(e)}")
+        return None, None, None
+
 st.title('我的韭菜日記')
 
 # 側邊欄
@@ -300,19 +322,35 @@ with st.sidebar:
     st.header('管理投資組合')
     
     with st.expander("添加新股票", expanded=False):
+        symbol = st.text_input('股票代號').upper()
+        
+        name = None
+        market = None
+        current_price = None
+        
+        if symbol:
+            with st.spinner('正在查詢股票資訊...'):
+                time.sleep(0.5)  # 添加短暫延遲
+                name, market, current_price = get_stock_info(symbol)
+            
+            if name and market and current_price:
+                st.success(f"已找到股票: {name} ({market})")
+            else:
+                st.warning("無法找到股票資訊,請手動輸入")
+        
         with st.form("add_stock_form"):
-            symbol = st.text_input('股票代號').upper()
-            name = st.text_input('股票名稱')
-            market = st.selectbox('市場', ['美股', '台股'])
+            name_input = st.text_input('股票名稱', value=name if name else '')
+            market_input = st.selectbox('市場', ['台股', '美股'], index=['台股', '美股'].index(market) if market else 0)
+            
             buy_date = st.date_input('購買日期', max_value=datetime.now().date())
-            buy_price = st.number_input('購買價格', min_value=0.01, step=0.01)
+            buy_price = st.number_input('購買價格', min_value=0.01, step=0.01, value=current_price if current_price else 0.01)
             quantity = st.number_input('購買數量', min_value=1, step=1)
             submitted = st.form_submit_button('添加股票')
             if submitted:
                 new_stock = {
                     'Symbol': symbol,
-                    'Name': name,
-                    'Market': market,
+                    'Name': name_input,
+                    'Market': market_input,
                     'Transactions': [
                         {
                             'Buy Date': buy_date.strftime('%Y-%m-%d'),
