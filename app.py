@@ -337,34 +337,56 @@ st.title('我的韭菜日記')
 with st.sidebar:
     st.header('管理投資組合')
     
+    def reset_form_values():
+        if 'form_values' not in st.session_state:
+            st.session_state.form_values = {
+                'symbol': '',
+                'name': '',
+                'market': '台股',
+                'buy_date': datetime.now().date(),
+                'buy_price': 0.01,
+                'quantity': 1
+            }
+    
     with st.expander("添加新股票", expanded=False):
-        symbol = st.text_input('股票代號').upper()
+        reset_form_values()
+        
+        with st.form("search_stock_form"):
+            symbol = st.text_input('股票代號', value=st.session_state.form_values['symbol']).upper()
+            search_button = st.form_submit_button('搜尋股票資訊')
         
         name = None
         market = None
         current_price = None
         
-        if symbol:
+        if search_button and symbol:
             with st.spinner('正在查詢股票資訊...'):
-                time.sleep(0.5)  # 添加短暫延遲
+                time.sleep(0.5)
                 name, market, current_price = get_stock_info(symbol)
             
             if name and market and current_price:
                 st.success(f"已找到股票: {name} ({market})")
+                st.session_state.form_values.update({
+                    'symbol': symbol,
+                    'name': name,
+                    'market': market,
+                    'buy_price': current_price,
+                    'quantity': 1  # 重置數量為1
+                })
             elif name is None and market is None and current_price is None:
-                # 錯誤訊息已經在 get_stock_info 函數中顯示
                 pass
             else:
                 st.warning("無法完整獲取股票資訊，請檢查股票代號或稍後再試。")
         
         with st.form("add_stock_form"):
-            name_input = st.text_input('股票名稱', value=name if name else '')
-            market_input = st.selectbox('市場', ['台股', '美股'], index=['台股', '美股'].index(market) if market else 0)
+            name_input = st.text_input('股票名稱', value=st.session_state.form_values['name'])
+            market_input = st.selectbox('市場', ['台股', '美股'], index=['台股', '美股'].index(st.session_state.form_values['market']))
             
-            buy_date = st.date_input('購買日期', max_value=datetime.now().date())
-            buy_price = st.number_input('購買價格', min_value=0.01, step=0.01, value=current_price if current_price else 0.01)
-            quantity = st.number_input('購買數', min_value=1, step=1)
+            buy_date = st.date_input('購買日期', value=st.session_state.form_values['buy_date'], max_value=datetime.now().date())
+            buy_price = st.number_input('購買價格', min_value=0.01, step=0.01, value=st.session_state.form_values['buy_price'])
+            quantity = st.number_input('購買數', min_value=1, step=1, value=st.session_state.form_values['quantity'])
             submitted = st.form_submit_button('添加股票')
+            
             if submitted:
                 new_stock = {
                     'Symbol': symbol,
@@ -379,7 +401,6 @@ with st.sidebar:
                     ]
                 }
                 
-                # 檢查相同的股票
                 existing_stock = next((stock for stock in st.session_state.portfolio if stock['Symbol'] == symbol), None)
                 if existing_stock:
                     existing_stock['Transactions'].append(new_stock['Transactions'][0])
@@ -387,9 +408,20 @@ with st.sidebar:
                     st.session_state.portfolio.append(new_stock)
                 
                 save_portfolio()
-                st.success('已成功添加票')
+                st.success('已成功添加股票')
+                
+                # 更新表單值以保留剛剛添加的資訊
+                st.session_state.form_values.update({
+                    'symbol': symbol,
+                    'name': name_input,
+                    'market': market_input,
+                    'buy_date': buy_date,
+                    'buy_price': buy_price,
+                    'quantity': quantity
+                })
+                
                 st.rerun()
-    
+
     if st.session_state.portfolio:
         with st.expander("刪除交易", expanded=False):
             stock_to_delete = st.selectbox('選擇要刪除交易的股票', [f"{stock['Symbol']} - {stock['Name']}" for stock in st.session_state.portfolio])
