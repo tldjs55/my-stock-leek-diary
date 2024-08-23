@@ -9,7 +9,7 @@ import requests
 from plotly.subplots import make_subplots
 import time
 
-st.set_page_config(page_title="我的投資組合", page_icon="📊", layout="wide")
+st.set_page_config(page_title="我的投資組合", page_icon="📊", layout="wide", initial_sidebar_state="collapsed")
 
 st.markdown("""
 <style>
