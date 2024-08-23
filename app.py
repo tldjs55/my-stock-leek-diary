@@ -384,7 +384,7 @@ with st.sidebar:
             
             buy_date = st.date_input('購買日期', value=st.session_state.form_values['buy_date'], max_value=datetime.now().date())
             buy_price = st.number_input('購買價格', min_value=0.01, step=0.01, value=st.session_state.form_values['buy_price'])
-            quantity = st.number_input('購買數', min_value=1, step=1, value=st.session_state.form_values['quantity'])
+            quantity = st.number_input('購買股數', min_value=1, step=1, value=st.session_state.form_values['quantity'])
             submitted = st.form_submit_button('添加股票')
             
             if submitted:
