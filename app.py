@@ -55,6 +55,17 @@ st.markdown("""
         color: #007AFF;
         box-shadow: 0 0 10px rgba(0, 122, 255, 0.5);
     }
+    .stButton > button:active,
+    .stButton > button:focus {
+        background-color: #007AFF !important;
+        color: white !important;
+        box-shadow: none !important;
+    }
+    .stButton > button:focus:hover {
+        background-color: #ffffff !important;
+        color: #007AFF !important;
+        box-shadow: 0 0 10px rgba(0, 122, 255, 0.5) !important;
+    }
 
     /* 優化其他白色文字元素的懸浮效果 */
     .stSelectbox [data-baseweb="select"] div,
@@ -311,9 +322,14 @@ def get_stock_info(symbol):
             return info['longName'], '美股', current_price
         
         return None, None, None
+    except requests.exceptions.HTTPError as e:
+        if e.response.status_code == 404:
+            st.warning(f"找不到股票代號 '{symbol}' 的資訊。請確認股票代號是否正確。")
+        else:
+            st.error(f"查詢股票資訊時發生網路錯誤：{e}")
     except Exception as e:
-        print(f"查詢股票資訊時發生錯誤: {str(e)}")
-        return None, None, None
+        st.error(f"查詢股票資訊時發生未知錯誤：{str(e)}")
+    return None, None, None
 
 st.title('我的韭菜日記')
 
@@ -335,8 +351,11 @@ with st.sidebar:
             
             if name and market and current_price:
                 st.success(f"已找到股票: {name} ({market})")
+            elif name is None and market is None and current_price is None:
+                # 錯誤訊息已經在 get_stock_info 函數中顯示
+                pass
             else:
-                st.warning("無法找到股票資訊,請手動輸入")
+                st.warning("無法完整獲取股票資訊，請檢查股票代號或稍後再試。")
         
         with st.form("add_stock_form"):
             name_input = st.text_input('股票名稱', value=name if name else '')
@@ -344,7 +363,7 @@ with st.sidebar:
             
             buy_date = st.date_input('購買日期', max_value=datetime.now().date())
             buy_price = st.number_input('購買價格', min_value=0.01, step=0.01, value=current_price if current_price else 0.01)
-            quantity = st.number_input('購買數量', min_value=1, step=1)
+            quantity = st.number_input('購買數', min_value=1, step=1)
             submitted = st.form_submit_button('添加股票')
             if submitted:
                 new_stock = {
@@ -397,7 +416,7 @@ with st.sidebar:
 
     if st.button("儲存投資組合", key="save_portfolio_button"):
         save_portfolio()
-        st.success('已成功儲存投資組合')
+        st.success('已成功儲存資組合')
 
 # 主要內容區
 if st.session_state.portfolio:
@@ -593,7 +612,7 @@ if st.session_state.portfolio:
                 with col2:
                     st.markdown(f"<div style='text-align: center;'><p style='background-color: #E6F3FF; padding: 10px; border-radius: 5px;'>半年均價: {currency}{history['Six_Month_Avg'].iloc[0]:.2f}</p></div>", unsafe_allow_html=True)
             else:
-                st.warning(f"無法獲取 {selected_stock} 的歷史數據")
+                st.warning(f"無法獲 {selected_stock} 的歷史數據")
         else:
             st.warning("請選擇一支股票")
 
