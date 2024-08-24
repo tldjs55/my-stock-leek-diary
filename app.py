@@ -13,90 +13,140 @@ st.set_page_config(page_title="我的投資組合", page_icon="📊", layout="wi
 
 st.markdown("""
 <style>
-    .reportview-container {
-        background: #F7F7F7
+    @import url('https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@400;500;600&display=swap');
+
+    body {
+        font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+        background-image: url("https://images.unsplash.com/photo-1554034483-04fda0d3507b?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2670&q=80");
+        background-repeat: no-repeat;
+        background-size: cover;
+        background-attachment: fixed;
+        color: #1d1d1f;
+    }
+    .stApp {
+        background-color: rgba(255, 255, 255, 0.1);
     }
     .main {
-        background: #FFFFFF;
+        background-color: rgba(255, 255, 255, 0.8);
         padding: 2rem;
-        border-radius: 0.5rem;
-        box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.1) !important;
+        border-radius: 20px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+    }
+    [data-testid="stSidebar"] {
+        background-color: rgba(255, 255, 255, 0.8);
+        border-right: 1px solid rgba(210, 210, 215, 0.5);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
     }
     .stMetric {
-        background-color: #FFFFFF;
-        border-radius: 0.3rem;
+        background-color: rgba(255, 255, 255, 0.8);
+        border-radius: 10px;
         padding: 1rem;
-        box-shadow: 0 0.1rem 0.5rem 0 rgba(58, 59, 69, 0.1) !important;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+    }
+    .stMetric > div {
+        font-weight: 500;
+    }
+    .stMetric > div:first-child {
+        font-size: 0.9rem;
+        color: #6e6e73;
+    }
+    .stMetric > div:last-child {
+        font-size: 1.8rem;
+        font-weight: 600;
+        color: #1d1d1f;
     }
     .stDataFrame {
         border: none !important;
     }
+    .stDataFrame [data-testid="stTable"] {
+        border-collapse: separate;
+        border-spacing: 0;
+        border-radius: 10px;
+        overflow: hidden;
+        background-color: rgba(255, 255, 255, 0.8);
+    }
+    .stDataFrame [data-testid="stTable"] th {
+        background-color: rgba(245, 245, 247, 0.8);
+        color: #1d1d1f;
+        font-weight: 500;
+        text-transform: uppercase;
+        font-size: 0.8rem;
+        padding: 0.75rem 1rem;
+    }
+    .stDataFrame [data-testid="stTable"] td {
+        background-color: rgba(255, 255, 255, 0.8);
+        color: #1d1d1f;
+        padding: 0.75rem 1rem;
+        border-top: 1px solid rgba(210, 210, 215, 0.5);
+    }
     .stPlotlyChart {
-        border-radius: 0.3rem;
-        box-shadow: 0 0.1rem 0.5rem 0 rgba(58, 59, 69, 0.1) !important;
+        background-color: rgba(255, 255, 255, 0.8);
+        border-radius: 10px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+        padding: 1rem;
     }
     .stButton > button {
-        width: 100%;
-        background-color: #007AFF;
+        background-color: #0071e3;
         color: white;
         border: none;
-        padding: 10px 24px;
+        padding: 10px 20px;
         text-align: center;
         text-decoration: none;
         display: inline-block;
         font-size: 16px;
         margin: 4px 2px;
         cursor: pointer;
-        border-radius: 4px;
+        border-radius: 980px;
         transition: all 0.3s ease;
+        font-weight: 500;
     }
     .stButton > button:hover {
-        background-color: #ffffff;
-        color: #007AFF;
-        box-shadow: 0 0 10px rgba(0, 122, 255, 0.5);
+        background-color: #0077ed;
     }
-    .stButton > button:active,
-    .stButton > button:focus {
-        background-color: #007AFF !important;
-        color: white !important;
-        box-shadow: none !important;
+    .stButton > button:active {
+        background-color: #006edb;
     }
-    .stButton > button:focus:hover {
-        background-color: #ffffff !important;
-        color: #007AFF !important;
-        box-shadow: 0 0 10px rgba(0, 122, 255, 0.5) !important;
-    }
-
     .stSelectbox [data-baseweb="select"],
-    .stMultiSelect [data-baseweb="select"] {
-        cursor: pointer !important;
-    }
-
-    .stSelectbox [data-baseweb="select"] div,
-    .stMultiSelect [data-baseweb="select"] div {
-        cursor: pointer !important;
-    }
-
+    .stMultiSelect [data-baseweb="select"],
     .stTextInput input,
     .stDateInput input,
     .stTimeInput input,
     .stNumberInput input {
+        background-color: rgba(255, 255, 255, 0.8);
+        border: 1px solid rgba(210, 210, 215, 0.5);
+        border-radius: 8px;
         transition: all 0.3s ease;
     }
-
-    .stSelectbox [data-baseweb="select"]:hover div,
-    .stMultiSelect [data-baseweb="select"]:hover div,
+    .stSelectbox [data-baseweb="select"]:hover,
+    .stMultiSelect [data-baseweb="select"]:hover,
     .stTextInput input:hover,
     .stDateInput input:hover,
     .stTimeInput input:hover,
     .stNumberInput input:hover {
-        background-color: rgba(255, 255, 255, 0.1);
-        box-shadow: 0 0 5px rgba(255, 255, 255, 0.3);
+        border-color: #0071e3;
     }
-
-    .stTextInput [data-baseweb="input"],
-    .stTextInput [data-baseweb="input"] * {
-        cursor: text !important;
+    .stSelectbox [data-baseweb="select"]:focus,
+    .stMultiSelect [data-baseweb="select"]:focus,
+    .stTextInput input:focus,
+    .stDateInput input:focus,
+    .stTimeInput input:focus,
+    .stNumberInput input:focus {
+        border-color: #0071e3;
+        box-shadow: 0 0 0 4px rgba(0, 125, 250, 0.1);
+    }
+    div[data-testid="stMarkdownContainer"] > h1 {
+        font-weight: 600;
+        font-size: 2.5rem;
+        letter-spacing: -0.015em;
+    }
+    div[data-testid="stMarkdownContainer"] > h2 {
+        font-weight: 500;
+        font-size: 1.8rem;
+        letter-spacing: -0.01em;
+        color: #1d1d1f;
     }
 </style>
 """, unsafe_allow_html=True)
