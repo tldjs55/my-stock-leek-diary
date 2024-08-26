@@ -108,19 +108,35 @@ st.markdown("""
         padding: 10px 20px;
         text-align: center;
         text-decoration: none;
-        display: inline-block;
+        display: block;
         font-size: 16px;
-        margin: 4px 2px;
+        margin: 4px 0px;
         cursor: pointer;
         border-radius: 980px;
         transition: all 0.3s ease;
         font-weight: 500;
+        width: 100%;
     }
     .stButton > button:hover {
         background-color: #0077ed;
+        color: white !important;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     }
     .stButton > button:active {
         background-color: #006edb;
+        color: white !important;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        transform: translateY(1px);
+    }
+    .stButton > button:focus {
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.3);
+        color: white !important;
+    }
+    .stButton > button:disabled {
+        background-color: #a0a0a0;
+        color: #e0e0e0 !important;
+        cursor: not-allowed;
     }
     .stSelectbox [data-baseweb="select"],
     .stMultiSelect [data-baseweb="select"],
