@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import yfinance as yf
-from datetime import datetime
+from datetime import datetime, timedelta
 import json
 import plotly.graph_objects as go
 import plotly.express as px
@@ -83,10 +83,23 @@ st.markdown("""
         border-top: 1px solid rgba(210, 210, 215, 0.5);
     }
     .stPlotlyChart {
+        width: 100%;
+        max-width: 100%;
         background-color: rgba(255, 255, 255, 0.8);
         border-radius: 10px;
+        overflow: hidden !important;
         box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
-        padding: 1rem;
+    }
+    .js-plotly-plot, .plot-container {
+        width: 100%;
+        max-width: 100%;
+    }
+    .main .block-container {
+        padding-left: 2rem;
+        padding-right: 2rem;
+        padding-top: 2rem;
+        padding-bottom: 2rem;
+        max-width: 100%;
     }
     .stButton > button {
         background-color: #0071e3;
@@ -325,12 +338,21 @@ def create_profit_loss_chart(data, title, value_column='Profit/Loss', is_percent
 
 def get_stock_history(symbol, market, period='6mo'):
     try:
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=180)
+        
         if market == '美股':
             ticker = yf.Ticker(symbol)
         else:  # 台股
             ticker = yf.Ticker(f"{symbol}.TW")
-        history = ticker.history(period=period)
-        history['Six_Month_Avg'] = history['Close'].mean()  # 計算半年均價
+        
+        history = ticker.history(start=start_date, end=end_date)
+        
+        if history.empty:
+            st.warning(f"無法獲取 {symbol} 的歷史數據")
+            return None
+        
+        history['Six_Month_Avg'] = history['Close'].mean()
         return history
     except Exception as e:
         st.error(f"獲取 {symbol} 歷史數據時發生錯誤: {str(e)}")
@@ -342,23 +364,77 @@ def create_six_month_chart(portfolio):
     for i, stock in enumerate(portfolio, start=1):
         history = get_stock_history(stock['Symbol'], stock['Market'])
         if history is not None and not history.empty:
+            if history.index.max() < datetime.now() - timedelta(days=30):
+                st.warning(f"{stock['Symbol']} - {stock['Name']} 的數據可能不是最新的,最後更新日期為 {history.index.max().date()}")
+            
             fig.add_trace(
                 go.Scatter(x=history.index, y=history['Close'], name=stock['Symbol']),
                 row=i, col=1
             )
     
     fig.update_layout(
-        height=300*len(portfolio),
-        title_text="半年股價走勢",
-        showlegend=False,
-        plot_bgcolor='white',
-        paper_bgcolor='white',
-        font=dict(color='black')
+        title=f"{selected_stock} 半年走勢與成交量",
+        height=500,  # 增加圖表高度
+        margin=dict(l=20, r=20, t=40, b=100),
+        plot_bgcolor='rgba(255,255,255,0)',  # 保持繪圖區域透明
+        paper_bgcolor='rgba(255,255,255,0.8)',  # 設置輕微的背景色
+        font=dict(color='black'),
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=-0.3,
+            xanchor="center",
+            x=0.5,
+            bgcolor="rgba(255,255,255,0.5)",  # 半透明背景
+            bordercolor="rgba(0,0,0,0)",      # 移除邊框
+            borderwidth=0
+        ),
+        yaxis=dict(range=[y_min - y_padding, y_max + y_padding])  # 設置新的y軸範圍
     )
-    fig.update_xaxes(rangeslider_visible=False)
-    for i in range(1, len(portfolio)+1):
-        fig.update_yaxes(title_text="價格", row=i, col=1)
-    
+
+    # 添加一個不可見的邊框來創造圓角效果
+    fig.update_layout(
+        shapes=[
+            dict(
+                type="rect",
+                xref="paper",
+                yref="paper",
+                x0=0,
+                y0=0,
+                x1=1,
+                y1=1,
+                line=dict(
+                    color="rgba(255,255,255,0)",
+                    width=0,
+                ),
+                fillcolor="rgba(255,255,255,0.8)",
+                layer="below"
+            )
+        ]
+    )
+
+    # 更新 x 軸和 y 軸的外觀
+    fig.update_xaxes(
+        showline=True,
+        linewidth=1,
+        linecolor='lightgray',
+        mirror=True
+    )
+    fig.update_yaxes(
+        showline=True,
+        linewidth=1,
+        linecolor='lightgray',
+        mirror=True
+    )
+
+    # 如果您想完全移除網格線,可以添加以下代碼:
+    fig.update_xaxes(showgrid=False)
+    fig.update_yaxes(showgrid=False)
+
+    # 如果您想保留網格線但使其更淡,可以使用:
+    # fig.update_xaxes(showgrid=True, gridwidth=1, gridcolor='lightgray')
+    # fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='lightgray')
+
     return fig
 
 def get_stock_info(symbol):
@@ -519,7 +595,7 @@ if st.session_state.portfolio:
         col1, col2, col3 = st.columns(3)
         col1.metric("總投資", f"NT${total_investment:,.0f}")
         col2.metric("當前價值", f"NT${total_current_value:,.0f}")
-        col3.metric("總收益", f"NT${total_profit_loss:,.0f}", f"{total_performance:.2f}%", delta_color="inverse")
+        col3.metric("未實現收益", f"NT${total_profit_loss:,.0f}", f"{total_performance:.2f}%", delta_color="inverse")
 
         # 顯示匯率資訊
         st.markdown(f"<div style='text-align: right; color: gray; font-size: 0.8em;'>當前匯率：1 USD = {usd_to_twd_rate:.2f} TWD</div>", unsafe_allow_html=True)
@@ -531,16 +607,16 @@ if st.session_state.portfolio:
 
         with col1:
             fig_distribution = create_distribution_chart(performance)
-            st.plotly_chart(fig_distribution, use_container_width=True)
+            st.plotly_chart(fig_distribution, use_container_width=True, config={'displayModeBar': False})
 
         with col2:
             fig_absolute = create_profit_loss_chart(performance, title='股票收益/虧損金額', value_column='Profit/Loss (TWD)')
             fig_absolute.update_layout(height=400)
-            st.plotly_chart(fig_absolute, use_container_width=True)
+            st.plotly_chart(fig_absolute, use_container_width=True, config={'displayModeBar': False})
 
         fig_percentage = create_profit_loss_chart(performance, title='股票收益率', value_column='Performance %', is_percentage=True)
         fig_percentage.update_layout(height=400)
-        st.plotly_chart(fig_percentage, use_container_width=True)
+        st.plotly_chart(fig_percentage, use_container_width=True, config={'displayModeBar': False})
 
         # 半年股價走勢分析 (佔據整行)
         st.subheader('半年股價走勢分析')
@@ -636,10 +712,11 @@ if st.session_state.portfolio:
 
                 fig.update_layout(
                     title=f"{selected_stock} 半年走勢與成交量",
-                    height=500,  # 增加圖表高度
-                    margin=dict(l=20, r=20, t=40, b=100),
-                    plot_bgcolor='white',
-                    paper_bgcolor='white',
+                    autosize=True,
+                    margin=dict(l=20, r=20, t=40, b=20),  # 調整邊距
+                    height=500,  # 設置一個固定高度，或者根據需要調整
+                    plot_bgcolor='rgba(255,255,255,0)',  # 保持繪圖區域透明
+                    paper_bgcolor='rgba(255,255,255,0.8)',  # 設置輕微的背景色
                     font=dict(color='black'),
                     legend=dict(
                         orientation="h",
@@ -648,16 +725,59 @@ if st.session_state.portfolio:
                         xanchor="center",
                         x=0.5,
                         bgcolor="rgba(255,255,255,0.5)",  # 半透明背景
-                        bordercolor="rgba(0,0,0,0.1)",    # 淺灰色邊框
-                        borderwidth=1
+                        bordercolor="rgba(0,0,0,0)",      # 移除邊框
+                        borderwidth=0
                     ),
                     yaxis=dict(range=[y_min - y_padding, y_max + y_padding])  # 設置新的y軸範圍
+                )
+
+                # 添加一個不可見的邊框來創造圓角效果
+                fig.update_layout(
+                    shapes=[
+                        dict(
+                            type="rect",
+                            xref="paper",
+                            yref="paper",
+                            x0=0,
+                            y0=0,
+                            x1=1,
+                            y1=1,
+                            line=dict(
+                                color="rgba(255,255,255,0)",
+                                width=0,
+                            ),
+                            fillcolor="rgba(255,255,255,0.8)",
+                            layer="below"
+                        )
+                    ]
                 )
 
                 # 更新子圖的標題和軸標籤
                 fig.update_xaxes(title_text="日期", row=2, col=1)
                 fig.update_yaxes(title_text="價格", row=1, col=1)
                 fig.update_yaxes(title_text="成交量", row=2, col=1)
+
+                # 更新 x 軸和 y 軸的外觀
+                fig.update_xaxes(
+                    showline=True,
+                    linewidth=1,
+                    linecolor='lightgray',
+                    mirror=True
+                )
+                fig.update_yaxes(
+                    showline=True,
+                    linewidth=1,
+                    linecolor='lightgray',
+                    mirror=True
+                )
+
+                # 如果您想完全移除網格線,可以添加以下代碼:
+                fig.update_xaxes(showgrid=False)
+                fig.update_yaxes(showgrid=False)
+
+                # 如果您想保留網格線但使其更淡,可以使用:
+                # fig.update_xaxes(showgrid=True, gridwidth=1, gridcolor='lightgray')
+                # fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='lightgray')
 
                 # 添加註釋來標記平均買入價格和半年均價
                 fig.add_annotation(
@@ -687,7 +807,7 @@ if st.session_state.portfolio:
                     row=1, col=1
                 )
 
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
                 # 將買入均價和半年均價資訊並排顯示
                 col1, col2 = st.columns(2)
