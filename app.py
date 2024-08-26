@@ -161,6 +161,15 @@ st.markdown("""
         letter-spacing: -0.01em;
         color: #1d1d1f;
     }
+    .stSelectbox [data-baseweb="select"],
+    .stMultiSelect [data-baseweb="select"] {
+        cursor: pointer;
+    }
+
+    .stSelectbox [data-baseweb="select"] > div,
+    .stMultiSelect [data-baseweb="select"] > div {
+        cursor: pointer;
+    }
 </style>
 """, unsafe_allow_html=True)
 
