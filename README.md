@@ -1,10 +1,12 @@
 # 我的韭菜日記
 
-這是一個使用 Streamlit 開發的個人投資組合追蹤應用。可讓使用者管理他們的股票投資，並提供視覺化分析工具來幫助用戶了解他們的投資表現。
+這是一個使用 Streamlit 開發的持有股票投資組合追蹤應用。  
+它專門設計用於管理和分析用戶當前持有的股票投資，提供視覺化工具來幫助投資者更好地了解其現有投資組合的表現。
 
 ## 實際運行截圖
 
-<img width="1029" alt="screenshot_001" src="https://github.com/user-attachments/assets/b41b25a3-8fda-431a-94d8-ab3175c24a2c">
+![screenshot_001](https://github.com/user-attachments/assets/88543f17-9214-4dd6-a822-63846e64f45c)
+![screenshot_002](https://github.com/user-attachments/assets/479e2ee4-c0dd-4975-b743-387c8450b806)
 
 ## 功能
 
