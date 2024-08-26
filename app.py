@@ -250,30 +250,54 @@ def calculate_performance():
         current_price = get_current_price(symbol, market)
         
         if current_price is not None:
-            total_quantity = sum(transaction['Quantity'] for transaction in stock['Transactions'])
-            total_cost = sum(transaction['Buy Price'] * transaction['Quantity'] for transaction in stock['Transactions'])
-            average_buy_price = total_cost / total_quantity if total_quantity > 0 else 0
+            buy_transactions = [t for t in stock['Transactions'] if t['Type'] == '買入']
+            sell_transactions = [t for t in stock['Transactions'] if t['Type'] == '賣出']
             
-            current_value = current_price * total_quantity
-            profit_loss = current_value - total_cost
-            performance_pct = (profit_loss / total_cost) * 100 if total_cost != 0 else 0
+            total_buy_quantity = sum(t['Quantity'] for t in buy_transactions)
+            total_sell_quantity = sum(t['Quantity'] for t in sell_transactions)
+            current_quantity = total_buy_quantity - total_sell_quantity
+            
+            total_buy_cost = sum(t['Price'] * t['Quantity'] for t in buy_transactions)
+            total_sell_value = sum(t['Price'] * t['Quantity'] for t in sell_transactions)
+            
+            average_buy_price = total_buy_cost / total_buy_quantity if total_buy_quantity > 0 else 0
+            average_sell_price = total_sell_value / total_sell_quantity if total_sell_quantity > 0 else 0
+            
+            current_value = current_price * current_quantity
+            
+            unrealized_profit_loss = (current_price - average_buy_price) * current_quantity
+            realized_profit_loss = total_sell_value - (average_buy_price * total_sell_quantity)
+            
+            total_invested = total_buy_cost
+            total_profit_loss = unrealized_profit_loss + realized_profit_loss
+            
+            # 更新 performance_pct 的計算
+            if total_invested > 0:
+                performance_pct = (total_profit_loss / total_invested) * 100
+            else:
+                performance_pct = 0
 
             # 轉換為台幣
             if market == '美股':
                 current_value *= usd_to_twd_rate
-                total_cost *= usd_to_twd_rate
-                profit_loss *= usd_to_twd_rate
+                total_invested *= usd_to_twd_rate
+                unrealized_profit_loss *= usd_to_twd_rate
+                realized_profit_loss *= usd_to_twd_rate
+                total_profit_loss *= usd_to_twd_rate
 
             performance.append({
                 'Symbol': symbol,
                 'Name': stock['Name'],
                 'Market': market,
-                'Total Quantity': total_quantity,
+                'Current Quantity': current_quantity,
                 'Average Buy Price': f"{'US$' if market == '美股' else 'NT$'}{average_buy_price:.2f}",
+                'Average Sell Price': f"{'US$' if market == '美股' else 'NT$'}{average_sell_price:.2f}",
                 'Current Price': f"{'US$' if market == '美股' else 'NT$'}{current_price:.2f}",
                 'Current Value (TWD)': current_value,
-                'Total Cost (TWD)': total_cost,
-                'Profit/Loss (TWD)': profit_loss,
+                'Total Invested (TWD)': total_invested,
+                'Unrealized Profit/Loss (TWD)': unrealized_profit_loss,
+                'Realized Profit/Loss (TWD)': realized_profit_loss,
+                'Total Profit/Loss (TWD)': total_profit_loss,
                 'Performance %': performance_pct
             })
         else:
@@ -452,13 +476,8 @@ def create_six_month_chart(portfolio):
         mirror=True
     )
 
-    # 如果您想完全移除網格線,可以添加以下代碼:
-    fig.update_xaxes(showgrid=False)
-    fig.update_yaxes(showgrid=False)
-
-    # 如果您想保留網格線但使其更淡,可以使用:
-    # fig.update_xaxes(showgrid=True, gridwidth=1, gridcolor='lightgray')
-    # fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='lightgray')
+    fig.update_xaxes(showgrid=True, gridwidth=1, gridcolor='lightgray')
+    fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='lightgray')
 
     return fig
 
@@ -500,12 +519,13 @@ with st.sidebar:
                 'symbol': '',
                 'name': '',
                 'market': '台股',
-                'buy_date': datetime.now().date(),
-                'buy_price': 0.01,
+                'transaction_type': '買入',  # 新增
+                'transaction_date': datetime.now().date(),
+                'transaction_price': 0.01,
                 'quantity': 1
             }
     
-    with st.expander("添加新股票", expanded=False):
+    with st.expander("添加新交易", expanded=False):
         reset_form_values()
         
         with st.form("search_stock_form"):
@@ -527,7 +547,7 @@ with st.sidebar:
                     'symbol': symbol,
                     'name': name,
                     'market': market,
-                    'buy_price': current_price,
+                    'transaction_price': current_price,
                     'quantity': 1  # 重置數量為1
                 })
             elif name is None and market is None and current_price is None:
@@ -535,45 +555,47 @@ with st.sidebar:
             else:
                 st.warning("無法完整獲取股票資訊，請檢查股票代號或稍後再試。")
         
-        with st.form("add_stock_form"):
+        with st.form("add_transaction_form"):
             name_input = st.text_input('股票名稱', value=st.session_state.form_values['name'])
             market_input = st.selectbox('市場', ['台股', '美股'], index=['台股', '美股'].index(st.session_state.form_values['market']))
             
-            buy_date = st.date_input('購買日期', value=st.session_state.form_values['buy_date'], max_value=datetime.now().date())
-            buy_price = st.number_input('購買價格', min_value=0.01, step=0.01, value=st.session_state.form_values['buy_price'])
-            quantity = st.number_input('購買股數', min_value=1, step=1, value=st.session_state.form_values['quantity'])
-            submitted = st.form_submit_button('添加股票')
+            transaction_type = st.selectbox('交易類型', ['買入', '賣出'], index=['買入', '賣出'].index(st.session_state.form_values['transaction_type']))
+            transaction_date = st.date_input('交易日期', value=st.session_state.form_values['transaction_date'], max_value=datetime.now().date())
+            transaction_price = st.number_input('交易價格', min_value=0.01, step=0.01, value=st.session_state.form_values['transaction_price'])
+            quantity = st.number_input('交易股數', min_value=1, step=1, value=st.session_state.form_values['quantity'])
+            submitted = st.form_submit_button('添加交易')
             
             if submitted:
-                new_stock = {
-                    'Symbol': symbol,
-                    'Name': name_input,
-                    'Market': market_input,
-                    'Transactions': [
-                        {
-                            'Buy Date': buy_date.strftime('%Y-%m-%d'),
-                            'Buy Price': buy_price,
-                            'Quantity': quantity
-                        }
-                    ]
+                new_transaction = {
+                    'Date': transaction_date.strftime('%Y-%m-%d'),
+                    'Type': transaction_type,
+                    'Price': transaction_price,
+                    'Quantity': quantity
                 }
                 
                 existing_stock = next((stock for stock in st.session_state.portfolio if stock['Symbol'] == symbol), None)
                 if existing_stock:
-                    existing_stock['Transactions'].append(new_stock['Transactions'][0])
+                    existing_stock['Transactions'].append(new_transaction)
                 else:
+                    new_stock = {
+                        'Symbol': symbol,
+                        'Name': name_input,
+                        'Market': market_input,
+                        'Transactions': [new_transaction]
+                    }
                     st.session_state.portfolio.append(new_stock)
                 
                 save_portfolio()
-                st.success('已成功添加股票')
+                st.success('已成功添加交易')
                 
                 # 更新表單值以保留剛剛添加的資訊
                 st.session_state.form_values.update({
                     'symbol': symbol,
                     'name': name_input,
                     'market': market_input,
-                    'buy_date': buy_date,
-                    'buy_price': buy_price,
+                    'transaction_type': transaction_type,
+                    'transaction_date': transaction_date,
+                    'transaction_price': transaction_price,
                     'quantity': quantity
                 })
                 
@@ -587,7 +609,7 @@ with st.sidebar:
                 selected_stock = next((stock for stock in st.session_state.portfolio if stock['Symbol'] == symbol_to_delete), None)
                 
                 if selected_stock and selected_stock['Transactions']:
-                    transaction_options = [f"{t['Buy Date']} - 數: {t['Quantity']} - 價格: {t['Buy Price']}" for t in selected_stock['Transactions']]
+                    transaction_options = [f"{t['Date']} - 數: {t['Quantity']} - 價格: {t['Price']}" for t in selected_stock['Transactions']]
                     transaction_to_delete = st.selectbox('選擇要刪除的交易', transaction_options)
                     
                     if transaction_to_delete and st.button('刪除選中的交易', key='delete_transaction_button'):
@@ -612,15 +634,18 @@ if st.session_state.portfolio:
         usd_to_twd_rate = get_usd_to_twd_rate()
         
         # 顯示總體概況
-        total_investment = performance['Total Cost (TWD)'].sum()
+        total_investment = performance['Total Invested (TWD)'].sum()
         total_current_value = performance['Current Value (TWD)'].sum()
-        total_profit_loss = performance['Profit/Loss (TWD)'].sum()
-        total_performance = (total_profit_loss / total_investment) * 100 if total_investment != 0 else 0
+        total_unrealized_profit_loss = performance['Unrealized Profit/Loss (TWD)'].sum()
+        total_realized_profit_loss = performance['Realized Profit/Loss (TWD)'].sum()
+        total_performance = ((total_unrealized_profit_loss + total_realized_profit_loss) / total_investment) * 100 if total_investment != 0 else 0
+        total_realized_performance = (total_realized_profit_loss / total_investment) * 100 if total_investment != 0 else 0
 
-        col1, col2, col3 = st.columns(3)
+        col1, col2, col3, col4 = st.columns(4)
         col1.metric("總投資", f"NT${total_investment:,.0f}")
         col2.metric("當前價值", f"NT${total_current_value:,.0f}")
-        col3.metric("未實現損益", f"NT${total_profit_loss:,.0f}", f"{total_performance:.2f}%", delta_color="inverse")
+        col3.metric("未實現損益", f"NT${total_unrealized_profit_loss:,.0f}", f"{total_performance:.2f}%", delta_color="inverse")
+        col4.metric("已實現損益", f"NT${total_realized_profit_loss:,.0f}", f"{total_realized_performance:.2f}%", delta_color="inverse")
 
         # 顯示匯率資訊
         st.markdown(f"<div style='text-align: right; color: gray; font-size: 0.8em;'>當前匯率：1 USD = {usd_to_twd_rate:.2f} TWD</div>", unsafe_allow_html=True)
@@ -635,7 +660,7 @@ if st.session_state.portfolio:
             st.plotly_chart(fig_distribution, use_container_width=True, config={'displayModeBar': False})
 
         with col2:
-            fig_absolute = create_profit_loss_chart(performance, title='股票收益/虧損金額', value_column='Profit/Loss (TWD)')
+            fig_absolute = create_profit_loss_chart(performance, title='股票收益/虧損金額', value_column='Total Profit/Loss (TWD)')
             fig_absolute.update_layout(height=400)
             st.plotly_chart(fig_absolute, use_container_width=True, config={'displayModeBar': False})
 
@@ -654,10 +679,18 @@ if st.session_state.portfolio:
         if selected_stock_info:
             history = get_stock_history(selected_stock_info['Symbol'], selected_stock_info['Market'])
             if history is not None and not history.empty:
-                # 計算平均買入價格
-                total_quantity = sum(transaction['Quantity'] for transaction in selected_stock_info['Transactions'])
-                total_cost = sum(transaction['Buy Price'] * transaction['Quantity'] for transaction in selected_stock_info['Transactions'])
-                average_buy_price = total_cost / total_quantity if total_quantity > 0 else 0
+                # 計算平均買入價格和平均賣出價格
+                buy_transactions = [t for t in selected_stock_info['Transactions'] if t['Type'] == '買入']
+                sell_transactions = [t for t in selected_stock_info['Transactions'] if t['Type'] == '賣出']
+                
+                total_buy_quantity = sum(t['Quantity'] for t in buy_transactions)
+                total_sell_quantity = sum(t['Quantity'] for t in sell_transactions)
+                
+                total_buy_cost = sum(t['Price'] * t['Quantity'] for t in buy_transactions)
+                total_sell_value = sum(t['Price'] * t['Quantity'] for t in sell_transactions)
+                
+                average_buy_price = total_buy_cost / total_buy_quantity if total_buy_quantity > 0 else 0
+                average_sell_price = total_sell_value / total_sell_quantity if total_sell_quantity > 0 else 0
 
                 # 確定貨幣單位
                 currency = 'US$' if selected_stock_info['Market'] == '美股' else 'NT$'
@@ -796,13 +829,8 @@ if st.session_state.portfolio:
                     mirror=True
                 )
 
-                # 如果您想完全移除網格線,可以添加以下代碼:
-                fig.update_xaxes(showgrid=False)
-                fig.update_yaxes(showgrid=False)
-
-                # 如果您想保留網格線但使其更淡,可以使用:
-                # fig.update_xaxes(showgrid=True, gridwidth=1, gridcolor='lightgray')
-                # fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='lightgray')
+                fig.update_xaxes(showgrid=True, gridwidth=1, gridcolor='lightgray')
+                fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='lightgray')
 
                 # 添加註釋來標記平均買入價格和半年均價
                 fig.add_annotation(
@@ -832,13 +860,47 @@ if st.session_state.portfolio:
                     row=1, col=1
                 )
 
+                # 添加平均賣出價格線
+                if average_sell_price > 0:
+                    fig.add_trace(go.Scatter(
+                        x=[history.index[0], history.index[-1]],
+                        y=[average_sell_price, average_sell_price],
+                        mode='lines',
+                        name='平均賣出價格',
+                        line=dict(color=tech_color_scheme[5], dash='dash', width=3)
+                    ), row=1, col=1)
+
+                    # 動態調整註釋位置
+                    if average_sell_price < min(average_buy_price, history['Six_Month_Avg'].iloc[0]):
+                        annotation_ax = 50
+                        annotation_ay = 30
+                    else:
+                        annotation_ax = -50
+                        annotation_ay = -30
+
+                    fig.add_annotation(
+                        x=history.index[-9],
+                        y=average_sell_price,
+                        text=f"平均賣出價格: {currency}{average_sell_price:.2f}",
+                        showarrow=True,
+                        arrowhead=2,
+                        arrowsize=1,
+                        arrowwidth=2,
+                        arrowcolor=tech_color_scheme[5],
+                        ax=annotation_ax,
+                        ay=annotation_ay,
+                        row=1, col=1
+                    )
+
                 st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
-                # 將買入均價和半年均價資訊並排顯示
-                col1, col2 = st.columns(2)
+                # 將買入均價、賣出均價和半年均價資訊並排顯示
+                col1, col2, col3 = st.columns(3)
                 with col1:
                     st.markdown(f"<div style='text-align: center;'><p style='background-color: #E6F3FF; padding: 10px; border-radius: 5px;'>平均買入價格: {currency}{average_buy_price:.2f}</p></div>", unsafe_allow_html=True)
                 with col2:
+                    st.markdown(f"<div style='text-align: center;'><p style='background-color: #FFE6E6; padding: 10px; border-radius: 5px;'>平均賣出價格: {currency}{average_sell_price:.2f}</p></div>", unsafe_allow_html=True)
+                with col3:
                     st.markdown(f"<div style='text-align: center;'><p style='background-color: #E6F3FF; padding: 10px; border-radius: 5px;'>半年均價: {currency}{history['Six_Month_Avg'].iloc[0]:.2f}</p></div>", unsafe_allow_html=True)
             else:
                 st.warning(f"無法獲 {selected_stock} 的歷史數據")
@@ -853,14 +915,17 @@ if st.session_state.portfolio:
                 color = '#FF3B30' if val > 0 else '#34C759'
                 return f'color: {color}'
 
-            styled_df = performance[['Symbol', 'Name', 'Market', 'Total Quantity', 'Average Buy Price', 'Current Price', 'Current Value (TWD)', 'Profit/Loss (TWD)', 'Performance %']].style.format({
-                'Total Quantity': '{:,.0f}',
-                'Average Buy Price': lambda x: x,  # 保持原樣,因為已經在calculate_performance中格式化
+            styled_df = performance[['Symbol', 'Name', 'Market', 'Current Quantity', 'Average Buy Price', 'Average Sell Price', 'Current Price', 'Current Value (TWD)', 'Unrealized Profit/Loss (TWD)', 'Realized Profit/Loss (TWD)', 'Total Profit/Loss (TWD)', 'Performance %']].style.format({
+                'Current Quantity': '{:,.0f}',
+                'Average Buy Price': lambda x: x,
+                'Average Sell Price': lambda x: x,
                 'Current Price': lambda x: x,
                 'Current Value (TWD)': 'NT${:,.0f}',
-                'Profit/Loss (TWD)': 'NT${:,.0f}',
+                'Unrealized Profit/Loss (TWD)': 'NT${:,.0f}',
+                'Realized Profit/Loss (TWD)': 'NT${:,.0f}',
+                'Total Profit/Loss (TWD)': 'NT${:,.0f}',
                 'Performance %': '{:.2f}%'
-            }).map(color_profit_loss, subset=['Profit/Loss (TWD)', 'Performance %'])
+            }).map(color_profit_loss, subset=['Unrealized Profit/Loss (TWD)', 'Realized Profit/Loss (TWD)', 'Total Profit/Loss (TWD)', 'Performance %'])
             
             st.dataframe(styled_df, hide_index=True, use_container_width=True)
 
@@ -871,7 +936,7 @@ if st.session_state.portfolio:
                 transactions_df = pd.DataFrame(stock['Transactions'])
                 st.dataframe(
                     transactions_df.style.format({
-                        'Buy Price': '${:.2f}',
+                        'Price': '${:.2f}',
                         'Quantity': '{:,.0f}'
                     }),
                     hide_index=True
