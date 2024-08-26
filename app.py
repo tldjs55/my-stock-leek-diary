@@ -9,7 +9,7 @@ import requests
 from plotly.subplots import make_subplots
 import time
 
-st.set_page_config(page_title="我的投資組合", page_icon="📊", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="我的韭菜日記", page_icon="📊", layout="wide", initial_sidebar_state="collapsed")
 
 st.markdown("""
 <style>
@@ -595,7 +595,7 @@ if st.session_state.portfolio:
         col1, col2, col3 = st.columns(3)
         col1.metric("總投資", f"NT${total_investment:,.0f}")
         col2.metric("當前價值", f"NT${total_current_value:,.0f}")
-        col3.metric("未實現收益", f"NT${total_profit_loss:,.0f}", f"{total_performance:.2f}%", delta_color="inverse")
+        col3.metric("未實現損益", f"NT${total_profit_loss:,.0f}", f"{total_performance:.2f}%", delta_color="inverse")
 
         # 顯示匯率資訊
         st.markdown(f"<div style='text-align: right; color: gray; font-size: 0.8em;'>當前匯率：1 USD = {usd_to_twd_rate:.2f} TWD</div>", unsafe_allow_html=True)
@@ -837,7 +837,7 @@ if st.session_state.portfolio:
                 'Performance %': '{:.2f}%'
             }).map(color_profit_loss, subset=['Profit/Loss (TWD)', 'Performance %'])
             
-            st.dataframe(styled_df, hide_index=True, height=400)
+            st.dataframe(styled_df, hide_index=True, use_container_width=True)
 
         # 顯示每支股票的詳細購買記錄
         with st.expander("查看詳細購買記錄", expanded=False):
