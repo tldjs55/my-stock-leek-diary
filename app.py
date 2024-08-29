@@ -871,10 +871,17 @@ if st.session_state.portfolio:
                     ), row=1, col=1)
 
                     # 動態調整註釋位置
-                    if average_sell_price < min(average_buy_price, history['Six_Month_Avg'].iloc[0]):
+                    prices = [average_buy_price, history['Six_Month_Avg'].iloc[0], average_sell_price]
+                    prices.sort()
+                    sell_price_index = prices.index(average_sell_price)
+
+                    if sell_price_index == 0:  # 最低
                         annotation_ax = 50
                         annotation_ay = 30
-                    else:
+                    elif sell_price_index == 1:  # 中間
+                        annotation_ax = -50
+                        annotation_ay = -30 if average_sell_price > prices[0] + (prices[2] - prices[0]) / 2 else 30
+                    else:  # 最高
                         annotation_ax = -50
                         annotation_ay = -30
 
