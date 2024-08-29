@@ -607,18 +607,22 @@ with st.sidebar:
             if stock_to_delete:
                 symbol_to_delete = stock_to_delete.split(' - ')[0]
                 selected_stock = next((stock for stock in st.session_state.portfolio if stock['Symbol'] == symbol_to_delete), None)
-                
+
                 if selected_stock and selected_stock['Transactions']:
-                    transaction_options = [f"{t['Date']} - 數: {t['Quantity']} - 價格: {t['Price']}" for t in selected_stock['Transactions']]
+                    # 反轉交易列表使最新的交易出現在最前面
+                    reversed_transactions = selected_stock['Transactions'][::-1]
+                    transaction_options = [f"{t['Date']} - {'買入' if t['Type'] == '買入' else '賣出'} {t['Quantity']} 股 - 價格: {t['Price']}" for t in reversed_transactions]
                     transaction_to_delete = st.selectbox('選擇要刪除的交易', transaction_options)
-                    
+
                     if transaction_to_delete and st.button('刪除選中的交易', key='delete_transaction_button'):
                         index_to_delete = transaction_options.index(transaction_to_delete)
-                        del selected_stock['Transactions'][index_to_delete]
-                        
+                        # 從反轉後的列表中刪除，然後再次反轉以保持原始順序
+                        del reversed_transactions[index_to_delete]
+                        selected_stock['Transactions'] = reversed_transactions[::-1]
+
                         if not selected_stock['Transactions']:
                             st.session_state.portfolio = [stock for stock in st.session_state.portfolio if stock['Symbol'] != symbol_to_delete]
-                        
+
                         save_portfolio()
                         st.success(f'已刪除 {stock_to_delete} 的交易：{transaction_to_delete}')
                         st.rerun()
