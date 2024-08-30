@@ -301,7 +301,7 @@ def calculate_performance():
                 'Performance %': performance_pct
             })
         else:
-            st.warning(f"無法獲取 {symbol} 的當前價格，已從性能計算中排除。")
+            st.warning(f"無法獲取 {symbol} 的當前價格。")
     
     return pd.DataFrame(performance)
 
@@ -414,7 +414,7 @@ def create_six_month_chart(portfolio):
         history = get_stock_history(stock['Symbol'], stock['Market'])
         if history is not None and not history.empty:
             if history.index.max() < datetime.now() - timedelta(days=30):
-                st.warning(f"{stock['Symbol']} - {stock['Name']} 的數據可能不是最新的,最後更新日期為 {history.index.max().date()}")
+                st.warning(f"{stock['Symbol']} - {stock['Name']} 的數據可能不是最新的，最後更新日期為 {history.index.max().date()}")
             
             fig.add_trace(
                 go.Scatter(x=history.index, y=history['Close'], name=stock['Symbol']),
@@ -519,7 +519,7 @@ with st.sidebar:
                 'symbol': '',
                 'name': '',
                 'market': '台股',
-                'transaction_type': '買入',  # 新增
+                'transaction_type': '買入',
                 'transaction_date': datetime.now().date(),
                 'transaction_price': 0.01,
                 'quantity': 1
@@ -548,7 +548,7 @@ with st.sidebar:
                     'name': name,
                     'market': market,
                     'transaction_price': current_price,
-                    'quantity': 1  # 重置數量為1
+                    'quantity': 1
                 })
             elif name is None and market is None and current_price is None:
                 pass
@@ -634,7 +634,6 @@ if st.session_state.portfolio:
     performance = calculate_performance()
     
     if not performance.empty:
-        # 獲取匯率
         usd_to_twd_rate = get_usd_to_twd_rate()
         
         # 顯示總體概況
@@ -776,7 +775,7 @@ if st.session_state.portfolio:
                     title=f"{selected_stock} 半年走勢與成交量",
                     autosize=True,
                     margin=dict(l=20, r=20, t=40, b=20),  # 調整邊距
-                    height=500,  # 設置一個固定高度，或者根據需要調整
+                    height=500,
                     plot_bgcolor='rgba(255,255,255,0)',  # 保持繪圖區域透明
                     paper_bgcolor='rgba(255,255,255,0.8)',  # 設置輕微的背景色
                     font=dict(color='black'),
@@ -884,7 +883,7 @@ if st.session_state.portfolio:
                         annotation_ay = 30
                     elif sell_price_index == 1:  # 中間
                         annotation_ax = -50
-                        annotation_ay = -30 if average_sell_price > prices[0] + (prices[2] - prices[0]) / 2 else 30
+                        annotation_ay = -60 if average_sell_price > prices[0] + (prices[2] - prices[0]) / 2 else 60
                     else:  # 最高
                         annotation_ax = -50
                         annotation_ay = -30
