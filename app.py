@@ -525,7 +525,7 @@ with st.sidebar:
                 'quantity': 1
             }
     
-    with st.expander("添加新交易", expanded=False):
+    with st.expander("記錄新交易", expanded=False):
         reset_form_values()
         
         with st.form("search_stock_form"):
@@ -563,7 +563,7 @@ with st.sidebar:
             transaction_date = st.date_input('交易日期', value=st.session_state.form_values['transaction_date'], max_value=datetime.now().date())
             transaction_price = st.number_input('交易價格', min_value=0.01, step=0.01, value=st.session_state.form_values['transaction_price'])
             quantity = st.number_input('交易股數', min_value=1, step=1, value=st.session_state.form_values['quantity'])
-            submitted = st.form_submit_button('添加交易')
+            submitted = st.form_submit_button('記錄交易')
             
             if submitted:
                 new_transaction = {
@@ -586,7 +586,7 @@ with st.sidebar:
                     st.session_state.portfolio.append(new_stock)
                 
                 save_portfolio()
-                st.success('已成功添加交易')
+                st.success('已成功記錄交易')
                 
                 # 更新表單值以保留剛剛添加的資訊
                 st.session_state.form_values.update({
@@ -673,12 +673,19 @@ if st.session_state.portfolio:
 
         # 半年股價走勢分析 (佔據整行)
         st.subheader('半年股價走勢分析')
-        stock_options = [f"{stock['Symbol']} - {stock['Name']}" for stock in st.session_state.portfolio]
-        selected_stock = st.selectbox('選擇股票查看半年走勢', stock_options)
+    
+        # 計算每支股票的投資金額佔比
+        total_investment = performance['Current Value (TWD)'].sum()
+        performance['Investment Percentage'] = performance['Current Value (TWD)'] / total_investment * 100
 
+        # 根據投資金額佔比排序股票選項
+        sorted_stock_options = performance.sort_values('Investment Percentage', ascending=False).apply(lambda row: f"{row['Symbol']} - {row['Name']} ({row['Investment Percentage']:.2f}%)", axis=1).tolist()
+        selected_stock = st.selectbox('選擇股票查看半年走勢', sorted_stock_options)
+
+        # 從選擇的選項中提取股票代號
         selected_symbol = selected_stock.split(' - ')[0]
         selected_stock_info = next((stock for stock in st.session_state.portfolio if stock['Symbol'] == selected_symbol), None)
-
+        
         if selected_stock_info:
             history = get_stock_history(selected_stock_info['Symbol'], selected_stock_info['Market'])
             if history is not None and not history.empty:
@@ -918,26 +925,37 @@ if st.session_state.portfolio:
             st.warning("請選擇一支股票")
 
         # 顯示詳細的投資組合表格
-        with st.expander("投資組合詳情", expanded=False):
-            st.subheader('投資組合詳情')
-            
+        with st.expander("投資組合詳情", expanded=False):            
             def color_profit_loss(val):
                 color = '#FF3B30' if val > 0 else '#34C759'
                 return f'color: {color}'
 
-            styled_df = performance[['Symbol', 'Name', 'Market', 'Current Quantity', 'Average Buy Price', 'Average Sell Price', 'Current Price', 'Current Value (TWD)', 'Unrealized Profit/Loss (TWD)', 'Realized Profit/Loss (TWD)', 'Total Profit/Loss (TWD)', 'Performance %']].style.format({
+            # 將表格分為兩部分
+            performance_part1 = performance[['Symbol', 'Name', 'Market', 'Current Quantity', 'Average Buy Price', 'Current Price']]
+            performance_part2 = performance[['Symbol', 'Current Value (TWD)', 'Unrealized Profit/Loss (TWD)', 'Realized Profit/Loss (TWD)', 'Total Profit/Loss (TWD)', 'Performance %']]
+
+            # 格式化和樣式設置第一部分
+            styled_df1 = performance_part1.style.format({
                 'Current Quantity': '{:,.0f}',
                 'Average Buy Price': lambda x: x,
-                'Average Sell Price': lambda x: x,
                 'Current Price': lambda x: x,
+            })
+
+            # 格式化和樣式設置第二部分
+            styled_df2 = performance_part2.style.format({
                 'Current Value (TWD)': 'NT${:,.0f}',
                 'Unrealized Profit/Loss (TWD)': 'NT${:,.0f}',
                 'Realized Profit/Loss (TWD)': 'NT${:,.0f}',
                 'Total Profit/Loss (TWD)': 'NT${:,.0f}',
                 'Performance %': '{:.2f}%'
             }).map(color_profit_loss, subset=['Unrealized Profit/Loss (TWD)', 'Realized Profit/Loss (TWD)', 'Total Profit/Loss (TWD)', 'Performance %'])
+
+            # 顯示兩個表格，上下排列
+            st.markdown("### 基本資訊")
+            st.dataframe(styled_df1, hide_index=True, use_container_width=True, height=200)
             
-            st.dataframe(styled_df, hide_index=True, use_container_width=True)
+            st.markdown("### 收益資訊")
+            st.dataframe(styled_df2, hide_index=True, use_container_width=True, height=200)
 
         # 顯示每支股票的詳細購買記錄
         with st.expander("查看詳細購買記錄", expanded=False):
@@ -953,4 +971,4 @@ if st.session_state.portfolio:
                 )
 
     else:
-        st.info('您的投資組合目前為空。請使用側邊欄添加股票。')
+        st.info('您的投資組合目前為空。請使用側邊欄開始記錄交易。')
