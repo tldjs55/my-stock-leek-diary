@@ -63,7 +63,7 @@
    streamlit run app.py
    ```
 
-3. 在瀏覽器中打開顯示的本地網址（Local URL: http://localhost:8501）來使用這個應用程式。
+3. 在瀏覽器中打開顯示的本地網址（localhost:8501）來使用這個應用程式。
 
 ## 注意事項
 
