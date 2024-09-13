@@ -5,8 +5,8 @@
 
 ## 實際運行截圖 with Sample Data
 
-![screenshot_001](https://github.com/user-attachments/assets/88543f17-9214-4dd6-a822-63846e64f45c)
-![screenshot_002](https://github.com/user-attachments/assets/479e2ee4-c0dd-4975-b743-387c8450b806)
+![screenshot_001](https://github.com/user-attachments/assets/63004469-83a9-4d70-9da0-3d682184bd04)
+![screenshot_002](https://github.com/user-attachments/assets/8681516e-6282-4819-bf33-a40159714a0a)
 
 ## 功能
 
